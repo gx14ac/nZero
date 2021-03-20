@@ -42,4 +42,5 @@ def f(x):
 x = Variable(np.array(0.5))
 dy = numerical_diff(f, x)
 
+## x = 0.5の時の変化量
 print(dy)
