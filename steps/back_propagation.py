@@ -5,15 +5,31 @@ class Variable:
     def __init__(self, data):
         self.nd_array_data = data
         self.nd_array_grad = None
+        self.creator = None
+
+    def set_creator(self, func):
+        self.creator = func
+
+    def backward(self):
+        f = self.creator  # 1. 関数を取得
+        if f is not None:
+            x = f.input  # 2. 関数の入力を取得
+            # 3. 関数のbackward(forward値の微分を返す)
+            x.nd_array_grad = f.backward(self.nd_array_grad)
+            # 4. 自分より一つ前の変数のackwardメソッドを呼ぶ
+            x.backward()
+
 
 
 class Function:
-    def __call__(self, variable):
-        x = variable.nd_array_data
+    def __call__(self, input_variable):
+        x = input_variable.nd_array_data
         y = self.forward(x)
-        output = Variable(y)
-        self.input = variable  # for backpropagation
-        return output
+        variable = Variable(y)
+        variable.set_creator(self)   # 出力変数に関数を覚えさせる
+        self.input = input_variable  # for backpropagation
+        self.output = variable       # 出力も覚えておく
+        return variable
 
     def forward(self, x):
         raise NotImplementedError()
@@ -64,8 +80,6 @@ b = B(a)
 y = C(b)
 
 # 逆伝播
-y.nd_array_grad = np.array(1.0)  # 逆伝播の時はdx/dy=1.0
-b.nd_array_grad = C.backward(y.nd_array_grad)
-a.nd_array_grad = B.backward(b.nd_array_grad)
-x.nd_array_grad = A.backward(a.nd_array_grad)
+y.nd_array_grad = np.array(1.0)
+y.backward()
 print(x.nd_array_grad)
