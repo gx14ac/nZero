@@ -20,6 +20,7 @@ class Variable:
             x.backward()
 
 
+
 class Function:
     def __call__(self, input_variable):
         x = input_variable.nd_array_data
@@ -79,14 +80,6 @@ b = B(a)
 y = C(b)
 
 # 逆伝播
-# y.nd_array_grad = np.array(1.0)  # 逆伝播の時はdx/dy=1.0
-# b.nd_array_grad = C.backward(y.nd_array_grad)
-# a.nd_array_grad = B.backward(b.nd_array_grad)
-# x.nd_array_grad = A.backward(a.nd_array_grad)
-# print(x.nd_array_grad)
-
-# 逆伝播
-
 y.nd_array_grad = np.array(1.0)
 y.backward()
 print(x.nd_array_grad)
