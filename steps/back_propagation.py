@@ -68,18 +68,21 @@ class Exp(Function):
         return gx
 
 
-# 順伝播
-# 0.5の時の数値微分を求める
-A = Square()
-B = Exp()
-C = Square()
+def square(x):
+    f = Square()
+    return f(x)
+
+
+def exp(x):
+    f = Exp()
+    return f(x)
+
 
 x = Variable(np.array(0.5))
-a = A(x)
-b = B(a)
-y = C(b)
+a = square(x)
+b = exp(a)
+y = square(b)
 
-# 逆伝播
 y.nd_array_grad = np.array(1.0)
 y.backward()
 print(x.nd_array_grad)
