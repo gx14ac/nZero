@@ -11,14 +11,14 @@ class Variable:
         self.creator = func
 
     def backward(self):
-        f = self.creator  # 1. 関数を取得
-        if f is not None:
-            x = f.input  # 2. 関数の入力を取得
-            # 3. 関数のbackward(forward値の微分を返す)
-            x.nd_array_grad = f.backward(self.nd_array_grad)
-            # 4. 自分より一つ前の変数のackwardメソッドを呼ぶ
-            x.backward()
+        funcs = [self.creator]
+        while funcs:
+            f = funcs.pop()
+            x, y = f.input, f.output
+            x.nd_array_grad = f.backward(y.nd_array_grad)
 
+            if x.creator is not None:
+                funcs.append(x.creator)
 
 
 class Function:
