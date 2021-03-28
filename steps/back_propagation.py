@@ -1,8 +1,13 @@
 import numpy as np
+import inspect
 
 
 class Variable:
     def __init__(self, data):
+        if data is not None:
+            if not isinstance(data, np.ndarray):
+                raise TypeError('{} is not supported'.format(type(data)))
+
         self.nd_array_data = data
         self.nd_array_grad = None
         self.creator = None
@@ -10,7 +15,15 @@ class Variable:
     def set_creator(self, func):
         self.creator = func
 
+    # 逆伝播ロジック(動的配列生成)
+    # 1. 関数取得
+    # 2. 関数の入出力を取得
+    # 3. 関数のbackwardメソッドを呼ぶ
+    # 4. 一つ前の関数をリストに追加
     def backward(self):
+        if self.nd_array_grad is None:
+            self.nd_array_grad = np.ones_like(self.nd_array_data)
+
         funcs = [self.creator]
         while funcs:
             f = funcs.pop()
@@ -21,11 +34,17 @@ class Variable:
                 funcs.append(x.creator)
 
 
+def as_array(x):
+    if np.isscalar(x):
+        return np.array(x)
+    return x
+
+
 class Function:
     def __call__(self, input_variable):
         x = input_variable.nd_array_data
         y = self.forward(x)
-        variable = Variable(y)
+        variable = Variable(as_array(y))
         variable.set_creator(self)   # 出力変数に関数を覚えさせる
         self.input = input_variable  # for backpropagation
         self.output = variable       # 出力も覚えておく
@@ -68,18 +87,15 @@ class Exp(Function):
         return gx
 
 
-# 順伝播
-# 0.5の時の数値微分を求める
-A = Square()
-B = Exp()
-C = Square()
+def square(x):
+    return Square()(x)
+
+
+def exp(x):
+    return Exp()(x)
+
 
 x = Variable(np.array(0.5))
-a = A(x)
-b = B(a)
-y = C(b)
-
-# 逆伝播
-y.nd_array_grad = np.array(1.0)
+y = square(exp(square(x)))
 y.backward()
 print(x.nd_array_grad)
