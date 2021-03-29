@@ -1,5 +1,5 @@
 import numpy as np
-import inspect
+import unittest
 
 
 class Variable:
@@ -95,7 +95,39 @@ def exp(x):
     return Exp()(x)
 
 
+# 中心差分近似で微分を求める
+def numerical_diff(f, x, eps=1e-4):
+    x0 = Variable(x.nd_array_data - eps)
+    x1 = Variable(x.nd_array_data + eps)
+    y0 = f(x0)
+    y1 = f(x1)
+    return (y1.nd_array_data - y0.nd_array_data) / (2 * eps)
+
+
 x = Variable(np.array(0.5))
 y = square(exp(square(x)))
 y.backward()
 print(x.nd_array_grad)
+
+
+class SquareTest(unittest.TestCase):
+    def test_forward(self):
+        x = Variable(np.array(2.0))
+        y = square(x)
+        expected = np.array(4.0)
+        self.assertEqual(y.nd_array_data, expected)
+
+    def test_backward(self):
+        x = Variable(np.array(3.0))
+        y = square(x)
+        y.backward()
+        excepted = np.array(6.0)
+        self.assertEqual(x.nd_array_grad, excepted)
+
+    def test_grad_check(self):
+        x = Variable(np.random.rand(1))
+        y = square(x)
+        y.backward()
+        num_grad = numerical_diff(square, x)
+        flag = np.allclose(x.nd_array_grad, num_grad)
+        self.assertTrue(flag)
