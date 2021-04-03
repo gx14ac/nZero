@@ -17,11 +17,15 @@ class Variable:
     def set_creator(self, func):
         self.creator = func
 
+    def cleargrad(self):
+        self.nd_array_grad = None
+
     # 逆伝播ロジック(動的配列生成)
     # 1. 関数取得
     # 2. 関数の入出力を取得
     # 3. 関数のbackwardメソッドを呼ぶ
     # 4. 一つ前の関数をリストに追加
+
     def backward(self):
         if self.nd_array_grad is None:
             self.nd_array_grad = np.ones_like(self.nd_array_data)
@@ -149,6 +153,13 @@ b = add(a, a)
 print('b', b.nd_array_data)
 
 b.backward()
+print('a', a.nd_array_grad)
+
+# 2回目
+a.cleargrad()
+c = add(add(a, a), a)
+
+c.backward()
 print('a', a.nd_array_grad)
 
 
