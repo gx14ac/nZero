@@ -41,49 +41,57 @@ def as_array(x):
 
 
 class Function:
-    def __call__(self, input_variable):
-        x = input_variable.nd_array_data
-        y = self.forward(x)
-        variable = Variable(as_array(y))
-        variable.set_creator(self)   # 出力変数に関数を覚えさせる
-        self.input = input_variable  # for backpropagation
-        self.output = variable       # 出力も覚えておく
-        return variable
+    def __call__(self, input_variables):
+        xs = [x.nd_array_data for x in input_variables]
+        ys = self.forward(xs)
+        variables = [Variable(as_array(y)) for y in ys]
+        for variable in variables:
+            variable.set_creator(self)   # 出力変数に関数を覚えさせる
+        self.inputs = input_variables  # for backpropagation
+        self.outputs = variables       # 出力も覚えておく
+        return variables
 
-    def forward(self, x):
+    def forward(self, xs):
         raise NotImplementedError()
 
-    def backward(self, gy):
+    def backward(self, gys):
         raise NotImplementedError()
 
 
 class Square(Function):
     # 伝播
     # y = x^2
-    def forward(self, x):
-        y = x ** 2
+    def forward(self, xs):
+        y = xs ** 2
         return y
 
     # 逆伝播
     # gy = ndarrayインスタンスの微分
     # y = x^2の微分が、dy/dx = 2x
-    def backward(self, gy):
+    def backward(self, gys):
         x = self.input.nd_array_data  # forwardの値
-        gx = 2 * x * gy
+        gx = 2 * x * gys
         return gx
+
+
+class Add(Function):
+    def forward(self, xs):
+        x0, x1 = xs
+        y = x0 + x1
+        return (y,)
 
 # ネイピア指数関数
 # 1>a>0
 
 
 class Exp(Function):
-    def forward(self, x):
-        y = np.exp(x)
+    def forward(self, xs):
+        y = np.exp(xs)
         return y
 
-    def backward(self, gy):
+    def backward(self, gys):
         x = self.input.nd_array_data
-        gx = np.exp(x) * gy
+        gx = np.exp(x) * gys
         return gx
 
 
@@ -108,6 +116,11 @@ x = Variable(np.array(0.5))
 y = square(exp(square(x)))
 y.backward()
 print(x.nd_array_grad)
+
+xs = [Variable(np.array(2)), Variable(np.array(2))]
+a = Add()(xs)
+b = a[0]
+print(b.nd_array_data)
 
 
 class SquareTest(unittest.TestCase):
