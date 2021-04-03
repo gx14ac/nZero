@@ -41,15 +41,18 @@ def as_array(x):
 
 
 class Function:
-    def __call__(self, input_variables):
+    def __call__(self, *input_variables):
         xs = [x.nd_array_data for x in input_variables]
-        ys = self.forward(xs)
+        ys = self.forward(*xs)  # アンパッキング、リストの要素を展開して渡す
+        # タプルでない場合の対応
+        # if not isinstance(ys, tuple):
+        #     ys = (ys,)
         variables = [Variable(as_array(y)) for y in ys]
         for variable in variables:
             variable.set_creator(self)   # 出力変数に関数を覚えさせる
         self.inputs = input_variables  # for backpropagation
         self.outputs = variables       # 出力も覚えておく
-        return variables
+        return variables if len(variables) > 1 else variables[0]
 
     def forward(self, xs):
         raise NotImplementedError()
@@ -75,8 +78,7 @@ class Square(Function):
 
 
 class Add(Function):
-    def forward(self, xs):
-        x0, x1 = xs
+    def forward(self, x0, x1):
         y = x0 + x1
         return (y,)
 
@@ -103,6 +105,10 @@ def exp(x):
     return Exp()(x)
 
 
+def add(x0, x1):
+    return Add()(x0, x1)
+
+
 # 中心差分近似で微分を求める
 def numerical_diff(f, x, eps=1e-4):
     x0 = Variable(x.nd_array_data - eps)
@@ -112,15 +118,15 @@ def numerical_diff(f, x, eps=1e-4):
     return (y1.nd_array_data - y0.nd_array_data) / (2 * eps)
 
 
-x = Variable(np.array(0.5))
-y = square(exp(square(x)))
-y.backward()
-print(x.nd_array_grad)
+# x = Variable(np.array(0.5))
+# y = square(exp(square(x)))
+# y.backward()
+# print(x.nd_array_grad)
 
-xs = [Variable(np.array(2)), Variable(np.array(2))]
-a = Add()(xs)
-b = a[0]
-print(b.nd_array_data)
+x0 = Variable(np.array(2))
+x1 = Variable(np.array(2))
+a = add(x0, x1)
+print(a.nd_array_data)
 
 
 class SquareTest(unittest.TestCase):
