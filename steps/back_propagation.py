@@ -37,7 +37,11 @@ class Variable:
                 gxs = (gxs,)
             # 前関数の引数と逆伝播された値
             for x, gx in zip(f.inputs, gxs):
-                x.nd_array_grad = gx
+                if x.nd_array_grad is None:
+                    x.nd_array_grad = gx
+                else:
+                    x.nd_array_grad = x.nd_array_grad + gx
+
                 if x.creator is not None:
                     funcs.append(x.creator)
 
@@ -131,11 +135,6 @@ def numerical_diff(f, x, eps=1e-4):
     return (y1.nd_array_data - y0.nd_array_data) / (2 * eps)
 
 
-# x = Variable(np.array(0.5))
-# y = square(exp(square(x)))
-# y.backward()
-# print(x.nd_array_grad)
-
 x = Variable(np.array(2.0))
 y = Variable(np.array(3.0))
 
@@ -144,6 +143,13 @@ z.backward()
 print(z.nd_array_data)
 print(x.nd_array_grad)
 print(y.nd_array_grad)
+
+a = Variable(np.array(3.0))
+b = add(a, a)
+print('b', b.nd_array_data)
+
+b.backward()
+print('a', a.nd_array_grad)
 
 
 class SquareTest(unittest.TestCase):
