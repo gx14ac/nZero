@@ -8,7 +8,9 @@ class Variable:
             if not isinstance(data, np.ndarray):
                 raise TypeError('{} is not supported'.format(type(data)))
 
+        # nd_array_data = 入力変数
         self.nd_array_data = data
+        # nd_array_grad = ある関数に対しての偏微分値(ある時点での関数の傾き具合)
         self.nd_array_grad = None
         self.creator = None
 
@@ -27,11 +29,17 @@ class Variable:
         funcs = [self.creator]
         while funcs:
             f = funcs.pop()
-            x, y = f.input, f.output
-            x.nd_array_grad = f.backward(y.nd_array_grad)
-
-            if x.creator is not None:
-                funcs.append(x.creator)
+            # 出力変数をリストに
+            gys = [output.nd_array_grad for output in f.outputs]
+            # 出力変数に対して、逆伝播を行う(偏微分)
+            gxs = f.backward(*gys)
+            if not isinstance(gxs, tuple):
+                gxs = (gxs,)
+            # 前関数の引数と逆伝播された値
+            for x, gx in zip(f.inputs, gxs):
+                x.nd_array_grad = gx
+                if x.creator is not None:
+                    funcs.append(x.creator)
 
 
 def as_array(x):
@@ -45,9 +53,10 @@ class Function:
         xs = [x.nd_array_data for x in input_variables]
         ys = self.forward(*xs)  # アンパッキング、リストの要素を展開して渡す
         # タプルでない場合の対応
-        # if not isinstance(ys, tuple):
-        #     ys = (ys,)
+        if not isinstance(ys, tuple):
+            ys = (ys,)
         variables = [Variable(as_array(y)) for y in ys]
+
         for variable in variables:
             variable.set_creator(self)   # 出力変数に関数を覚えさせる
         self.inputs = input_variables  # for backpropagation
@@ -64,23 +73,27 @@ class Function:
 class Square(Function):
     # 伝播
     # y = x^2
-    def forward(self, xs):
-        y = xs ** 2
+    def forward(self, x):
+        y = x ** 2
         return y
 
     # 逆伝播
     # gy = ndarrayインスタンスの微分
     # y = x^2の微分が、dy/dx = 2x
     def backward(self, gys):
-        x = self.input.nd_array_data  # forwardの値
+        x = self.inputs[0].nd_array_data  # forwardの値
         gx = 2 * x * gys
         return gx
 
 
+# 足し算の伝播と逆伝播
 class Add(Function):
     def forward(self, x0, x1):
         y = x0 + x1
-        return (y,)
+        return y
+
+    def backward(self, gy):
+        return gy, gy
 
 # ネイピア指数関数
 # 1>a>0
@@ -123,10 +136,14 @@ def numerical_diff(f, x, eps=1e-4):
 # y.backward()
 # print(x.nd_array_grad)
 
-x0 = Variable(np.array(2))
-x1 = Variable(np.array(2))
-a = add(x0, x1)
-print(a.nd_array_data)
+x = Variable(np.array(2.0))
+y = Variable(np.array(3.0))
+
+z = add(square(x), square(y))
+z.backward()
+print(z.nd_array_data)
+print(x.nd_array_grad)
+print(y.nd_array_grad)
 
 
 class SquareTest(unittest.TestCase):
