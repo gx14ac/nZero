@@ -157,10 +157,12 @@ def numerical_diff(f, x, eps=1e-4):
 
 x = Variable(np.array(2.0))
 a = square(x)
+print(a.nd_array_data)
 y = add(square(a), square(a))
 y.backward()
 
 print(y.nd_array_data)
+# 逆伝播を行った時に参照する値. nd_array_grad = ある関数に対しての偏微分値(ある時点での関数の傾き具合)
 print(x.nd_array_grad)
 
 for i in range(10):
