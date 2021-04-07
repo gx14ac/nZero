@@ -2,7 +2,7 @@ import numpy as np
 import unittest
 
 
-class Variable:
+class Variable(object):
     def __init__(self, data):
         if data is not None:
             if not isinstance(data, np.ndarray):
@@ -13,9 +13,11 @@ class Variable:
         # nd_array_grad = ある関数に対しての偏微分値(ある時点での関数の傾き具合)
         self.nd_array_grad = None
         self.creator = None
+        self.generation = 0
 
     def set_creator(self, func):
         self.creator = func
+        self.generation = func.generation + 1
 
     def cleargrad(self):
         self.nd_array_grad = None
@@ -30,7 +32,18 @@ class Variable:
         if self.nd_array_grad is None:
             self.nd_array_grad = np.ones_like(self.nd_array_data)
 
-        funcs = [self.creator]
+        funcs = []
+        seen_set = set()
+
+        # 関数を追加して、世代順にソートする
+        def add_func(f):
+            if f not in seen_set:
+                funcs.append(f)
+                seen_set.add(f)
+                funcs.sort(key=lambda x: x.generation)
+
+        add_func(self.creator)
+
         while funcs:
             f = funcs.pop()
             # 出力変数をリストに
@@ -47,7 +60,7 @@ class Variable:
                     x.nd_array_grad = x.nd_array_grad + gx
 
                 if x.creator is not None:
-                    funcs.append(x.creator)
+                    add_func(x.creator)
 
 
 def as_array(x):
@@ -56,7 +69,7 @@ def as_array(x):
     return x
 
 
-class Function:
+class Function(object):
     def __call__(self, *input_variables):
         xs = [x.nd_array_data for x in input_variables]
         ys = self.forward(*xs)  # アンパッキング、リストの要素を展開して渡す
@@ -65,6 +78,7 @@ class Function:
             ys = (ys,)
         variables = [Variable(as_array(y)) for y in ys]
 
+        self.generation = max([x.generation for x in input_variables])
         for variable in variables:
             variable.set_creator(self)   # 出力変数に関数を覚えさせる
         self.inputs = input_variables  # for backpropagation
@@ -140,27 +154,12 @@ def numerical_diff(f, x, eps=1e-4):
 
 
 x = Variable(np.array(2.0))
-y = Variable(np.array(3.0))
+a = square(x)
+y = add(square(a), square(a))
+y.backward()
 
-z = add(square(x), square(y))
-z.backward()
-print(z.nd_array_data)
+print(y.nd_array_data)
 print(x.nd_array_grad)
-print(y.nd_array_grad)
-
-a = Variable(np.array(3.0))
-b = add(a, a)
-print('b', b.nd_array_data)
-
-b.backward()
-print('a', a.nd_array_grad)
-
-# 2回目
-a.cleargrad()
-c = add(add(a, a), a)
-
-c.backward()
-print('a', a.nd_array_grad)
 
 
 class SquareTest(unittest.TestCase):
