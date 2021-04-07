@@ -1,5 +1,6 @@
 import numpy as np
 import unittest
+import weakref
 
 
 class Variable(object):
@@ -47,7 +48,7 @@ class Variable(object):
         while funcs:
             f = funcs.pop()
             # 出力変数をリストに
-            gys = [output.nd_array_grad for output in f.outputs]
+            gys = [output().nd_array_grad for output in f.outputs]
             # 出力変数に対して、逆伝播を行う(偏微分)
             gxs = f.backward(*gys)
             if not isinstance(gxs, tuple):
@@ -82,7 +83,8 @@ class Function(object):
         for variable in variables:
             variable.set_creator(self)   # 出力変数に関数を覚えさせる
         self.inputs = input_variables  # for backpropagation
-        self.outputs = variables       # 出力も覚えておく
+        self.outputs = [weakref.ref(variable)
+                        for variable in variables]       # 出力も覚えておく
         return variables if len(variables) > 1 else variables[0]
 
     def forward(self, xs):
@@ -160,6 +162,10 @@ y.backward()
 
 print(y.nd_array_data)
 print(x.nd_array_grad)
+
+for i in range(10):
+    x = Variable(np.random.randn(100000))
+    y = square(square(square(x)))
 
 
 class SquareTest(unittest.TestCase):
