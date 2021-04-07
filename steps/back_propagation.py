@@ -1,6 +1,7 @@
 import numpy as np
 import unittest
 import weakref
+import contextlib
 
 
 class Variable(object):
@@ -29,7 +30,7 @@ class Variable(object):
     # 3. 関数のbackwardメソッドを呼ぶ
     # 4. 一つ前の関数をリストに追加
 
-    def backward(self):
+    def backward(self, retain_grad=False):
         if self.nd_array_grad is None:
             self.nd_array_grad = np.ones_like(self.nd_array_data)
 
@@ -63,6 +64,10 @@ class Variable(object):
                 if x.creator is not None:
                     add_func(x.creator)
 
+                if Config.is_backprop:
+                    for y in f.outputs:
+                        y().nd_array_grad = None
+
 
 def as_array(x):
     if np.isscalar(x):
@@ -79,9 +84,9 @@ class Function(object):
             ys = (ys,)
         variables = [Variable(as_array(y)) for y in ys]
 
-        self.generation = max([x.generation for x in input_variables])
+        self.generation = max([x.generation for x in input_variables])  # 世代の設定
         for variable in variables:
-            variable.set_creator(self)   # 出力変数に関数を覚えさせる
+            variable.set_creator(self)   # 出力変数に関数を覚えさせる(繋がりの設定.親子関係の構築)
         self.inputs = input_variables  # for backpropagation
         self.outputs = [weakref.ref(variable)
                         for variable in variables]       # 出力も覚えておく
@@ -134,6 +139,10 @@ class Exp(Function):
         return gx
 
 
+class Config(object):
+    is_backprop = True
+
+
 def square(x):
     return Square()(x)
 
@@ -155,6 +164,20 @@ def numerical_diff(f, x, eps=1e-4):
     return (y1.nd_array_data - y0.nd_array_data) / (2 * eps)
 
 
+@contextlib.contextmanager
+def using_config(name, value):
+    old_value = getattr(Config, name)
+    setattr(Config, name, value)
+    try:
+        yield
+    finally:
+        setattr(Config, name, old_value)
+
+
+def no_grad():
+    return using_config('is_backprop', False)
+
+
 x = Variable(np.array(2.0))
 a = square(x)
 print(a.nd_array_data)
@@ -165,9 +188,9 @@ print(y.nd_array_data)
 # 逆伝播を行った時に参照する値. nd_array_grad = ある関数に対しての偏微分値(ある時点での関数の傾き具合)
 print(x.nd_array_grad)
 
-for i in range(10):
-    x = Variable(np.random.randn(100000))
-    y = square(square(square(x)))
+with no_grad():
+    x = Variable(np.array(2.0))
+    y = square(x)
 
 
 class SquareTest(unittest.TestCase):
