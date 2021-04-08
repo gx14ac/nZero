@@ -4,7 +4,27 @@ import weakref
 import contextlib
 
 
+class Config(object):
+    is_backprop = True
+
+
+@contextlib.contextmanager
+def using_config(name, value):
+    old_value = getattr(Config, name)
+    setattr(Config, name, value)
+    try:
+        yield
+    finally:
+        setattr(Config, name, old_value)
+
+
+def no_grad():
+    return using_config('is_backprop', False)
+
+
 class Variable(object):
+    __array_priority = 200
+
     def __init__(self, data, name=None):
         if data is not None:
             if not isinstance(data, np.ndarray):
@@ -69,7 +89,7 @@ class Variable(object):
         # 関数を追加して、世代順にソートする
         def add_func(f):
             if f not in seen_set:
-                funcs.append(f)
+                uncs.append(f)
                 seen_set.add(f)
                 funcs.sort(key=lambda x: x.generation)
 
@@ -185,10 +205,6 @@ class Exp(Function):
         return gx
 
 
-class Config(object):
-    is_backprop = True
-
-
 def square(x):
     return Square()(x)
 
@@ -209,20 +225,6 @@ def numerical_diff(f, x, eps=1e-4):
     y0 = f(x0)
     y1 = f(x1)
     return (y1.nd_array_data - y0.nd_array_data) / (2 * eps)
-
-
-@contextlib.contextmanager
-def using_config(name, value):
-    old_value = getattr(Config, name)
-    setattr(Config, name, value)
-    try:
-        yield
-    finally:
-        setattr(Config, name, old_value)
-
-
-def no_grad():
-    return using_config('is_backprop', False)
 
 
 def mul(x0, x1):
