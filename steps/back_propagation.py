@@ -190,9 +190,6 @@ class Add(Function):
     def backward(self, gy):
         return gy, gy
 
-# ネイピア指数関数
-# 1>a>0
-
 
 class Exp(Function):
     def forward(self, xs):
@@ -203,6 +200,18 @@ class Exp(Function):
         x = self.input.nd_array_data
         gx = np.exp(x) * gys
         return gx
+
+
+class Neg(Function):
+    def forward(self, x):
+        return -x
+
+    def backward(self, gy):
+        return -gy
+
+
+def neg(x):
+    return Neg()(x)
 
 
 def square(x):
@@ -236,6 +245,7 @@ Variable.__add__ = add
 Variable.__radd__ = add
 Variable.__mul__ = mul
 Variable.__rmul__ = mul
+Variable.__neg__ = neg
 
 x = Variable(np.array(2.0))
 y = x + np.array(3.0)
@@ -246,3 +256,8 @@ print(y)
 
 y = x + 1.0
 print(y)
+
+a = Variable(np.array(2.0))
+b = -a
+
+print(b)
