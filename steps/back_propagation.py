@@ -5,13 +5,14 @@ import contextlib
 
 
 class Variable(object):
-    def __init__(self, data):
+    def __init__(self, data, name=None):
         if data is not None:
             if not isinstance(data, np.ndarray):
                 raise TypeError('{} is not supported'.format(type(data)))
 
         # nd_array_data = 入力変数
         self.nd_array_data = data
+        self.name = name
         # nd_array_grad = ある関数に対しての偏微分値(ある時点での関数の傾き具合)
         self.nd_array_grad = None
         self.creator = None
@@ -23,6 +24,34 @@ class Variable(object):
 
     def cleargrad(self):
         self.nd_array_grad = None
+
+    def __len__(self):
+        return len(self.nd_array_data)
+
+    def __repr__(self):
+        if self.nd_array_data is None:
+            return 'variable(None)'
+        p = str(self.nd_array_data).replace('\n', '\n' + ' ' * 9)
+        return 'variable(' + p + ')'
+
+    def __mul__(self, other):
+        return mul(self, other)
+
+    @property
+    def shape(self):
+        return self.nd_array_data.shape
+
+    @property
+    def ndim(self):
+        return self.nd_array_data.ndim
+
+    @property
+    def size(self):
+        return self.nd_array_data.size
+
+    @property
+    def dtype(self):
+        return self.nd_array_data.dtype
 
     # 逆伝播ロジック(動的配列生成)
     # 1. 関数取得
@@ -97,6 +126,16 @@ class Function(object):
 
     def backward(self, gys):
         raise NotImplementedError()
+
+
+class Mul(Function):
+    def forward(self, x0, x1):
+        y = x0 * x1
+        return y
+
+    def backward(self, gy):
+        x0, x1 = self.inputs[0].nd_array_data, self.inputs[0].nd_array_data
+        return gy * x1, gy * x0
 
 
 class Square(Function):
@@ -178,7 +217,15 @@ def no_grad():
     return using_config('is_backprop', False)
 
 
+def mul(x0, x1):
+    return Mul()(x0, x1)
+
+
 x = Variable(np.array(2.0))
+print(x.shape)
+print(x.ndim)
+print(x.size)
+print(x.dtype)
 a = square(x)
 print(a.nd_array_data)
 y = add(square(a), square(a))
@@ -187,6 +234,12 @@ y.backward()
 print(y.nd_array_data)
 # 逆伝播を行った時に参照する値. nd_array_grad = ある関数に対しての偏微分値(ある時点での関数の傾き具合)
 print(x.nd_array_grad)
+
+b = Variable(np.array(2.0))
+c = Variable(np.array(3.0))
+
+d = b * c
+print(d)
 
 with no_grad():
     x = Variable(np.array(2.0))
