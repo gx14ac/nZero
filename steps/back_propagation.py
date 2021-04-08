@@ -104,8 +104,15 @@ def as_array(x):
     return x
 
 
+def as_variable(obj):
+    if isinstance(obj, Variable):
+        return obj
+    return Variable(obj)
+
+
 class Function(object):
-    def __call__(self, *input_variables):
+    def __call__(self, *inputs):
+        input_variables = [as_variable(x) for x in inputs]
         xs = [x.nd_array_data for x in input_variables]
         ys = self.forward(*xs)  # アンパッキング、リストの要素を展開して渡す
         # タプルでない場合の対応
@@ -191,6 +198,7 @@ def exp(x):
 
 
 def add(x0, x1):
+    x1 = as_array(x1)
     return Add()(x0, x1)
 
 
@@ -218,52 +226,21 @@ def no_grad():
 
 
 def mul(x0, x1):
+    x1 = as_array(x1)
     return Mul()(x0, x1)
 
 
+Variable.__add__ = add
+Variable.__radd__ = add
+Variable.__mul__ = mul
+Variable.__rmul__ = mul
+
 x = Variable(np.array(2.0))
-print(x.shape)
-print(x.ndim)
-print(x.size)
-print(x.dtype)
-a = square(x)
-print(a.nd_array_data)
-y = add(square(a), square(a))
-y.backward()
+y = x + np.array(3.0)
+print(y)
 
-print(y.nd_array_data)
-# 逆伝播を行った時に参照する値. nd_array_grad = ある関数に対しての偏微分値(ある時点での関数の傾き具合)
-print(x.nd_array_grad)
+y = x + 3.0
+print(y)
 
-b = Variable(np.array(2.0))
-c = Variable(np.array(3.0))
-
-d = b * c
-print(d)
-
-with no_grad():
-    x = Variable(np.array(2.0))
-    y = square(x)
-
-
-class SquareTest(unittest.TestCase):
-    def test_forward(self):
-        x = Variable(np.array(2.0))
-        y = square(x)
-        expected = np.array(4.0)
-        self.assertEqual(y.nd_array_data, expected)
-
-    def test_backward(self):
-        x = Variable(np.array(3.0))
-        y = square(x)
-        y.backward()
-        excepted = np.array(6.0)
-        self.assertEqual(x.nd_array_grad, excepted)
-
-    def test_grad_check(self):
-        x = Variable(np.random.rand(1))
-        y = square(x)
-        y.backward()
-        num_grad = numerical_diff(square, x)
-        flag = np.allclose(x.nd_array_grad, num_grad)
-        self.assertTrue(flag)
+y = x + 1.0
+print(y)
