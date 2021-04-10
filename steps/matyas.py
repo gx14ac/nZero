@@ -17,4 +17,3 @@ z.backward()
 
 print(x.grad, y.grad)
 
-
