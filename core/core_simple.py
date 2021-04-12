@@ -19,10 +19,8 @@ def using_config(name, value):
     finally:
         setattr(Config, name, old_value)
 
-
 def no_grad():
     return using_config('enable_backprop', False)
-
 
 # =============================================================================
 # Variable / Function
