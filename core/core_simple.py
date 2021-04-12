@@ -224,7 +224,7 @@ class Div(Function):
 
 def div(x0, x1):
     x1 = as_array(x1)
-    return iv()(x0, x1)
+    return Div()(x0, x1)
 
 
 def rdiv(x0, x1):
