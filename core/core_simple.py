@@ -2,13 +2,11 @@ import weakref
 import numpy as np
 import contextlib
 
-
 # =============================================================================
 # Config
 # =============================================================================
 class Config:
     enable_backprop = True
-
 
 @contextlib.contextmanager
 def using_config(name, value):
@@ -106,18 +104,15 @@ class Variable:
                 for y in f.outputs:
                     y().grad = None  # y is weakref
 
-
 def as_variable(obj):
     if isinstance(obj, Variable):
         return obj
     return Variable(obj)
 
-
 def as_array(x):
     if np.isscalar(x):
         return np.array(x)
     return x
-
 
 class Function:
     def __call__(self, *inputs):
@@ -144,7 +139,6 @@ class Function:
     def backward(self, gys):
         raise NotImplementedError()
 
-
 # =============================================================================
 # 四則演算 / 演算子のオーバーロード
 # =============================================================================
@@ -156,11 +150,9 @@ class Add(Function):
     def backward(self, gy):
         return gy, gy
 
-
 def add(x0, x1):
     x1 = as_array(x1)
     return Add()(x0, x1)
-
 
 class Mul(Function):
     def forward(self, x0, x1):
@@ -171,11 +163,9 @@ class Mul(Function):
         x0, x1 = self.inputs[0].data, self.inputs[1].data
         return gy * x1, gy * x0
 
-
 def mul(x0, x1):
     x1 = as_array(x1)
     return Mul()(x0, x1)
-
 
 class Neg(Function):
     def forward(self, x):
@@ -184,10 +174,8 @@ class Neg(Function):
     def backward(self, gy):
         return -gy
 
-
 def neg(x):
     return Neg()(x)
-
 
 class Sub(Function):
     def forward(self, x0, x1):
@@ -197,7 +185,6 @@ class Sub(Function):
     def backward(self, gy):
         return gy, -gy
 
-
 def sub(x0, x1):
     x1 = as_array(x1)
     return Sub()(x0, x1)
@@ -206,7 +193,6 @@ def sub(x0, x1):
 def rsub(x0, x1):
     x1 = as_array(x1)
     return Sub()(x1, x0)
-
 
 class Div(Function):
     def forward(self, x0, x1):
@@ -219,16 +205,13 @@ class Div(Function):
         gx1 = gy * (-x0 / x1 ** 2)
         return gx0, gx1
 
-
 def div(x0, x1):
     x1 = as_array(x1)
     return Div()(x0, x1)
 
-
 def rdiv(x0, x1):
     x1 = as_array(x1)
     return Div()(x1, x0)
-
 
 class Pow(Function):
     def __init__(self, c):
@@ -245,10 +228,8 @@ class Pow(Function):
         gx = c * x ** (c - 1) * gy
         return gx
 
-
 def pow(x, c):
     return Pow(c)(x)
-
 
 def setup_variable():
     Variable.__add__ = add
