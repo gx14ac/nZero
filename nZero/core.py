@@ -18,7 +18,6 @@ def using_config(name, value):
     try:
         yield
     finally:
-        print('finally')
         setattr(Config, name, old_value)
 
 
